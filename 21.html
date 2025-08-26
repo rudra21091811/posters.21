@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Posters.21</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; }
+        h1, h2 { color: #343a40; }
+        #postForm { margin-bottom: 20px; background: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input[type="text"], textarea { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ced4da; border-radius: 5px; }
+        input[type="file"] { margin-bottom: 10px; }
+        button { padding: 10px 15px; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: #0056b3; }
+        .post { background: #ffffff; border: 1px solid #ced4da; padding: 15px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .rating { margin-top: 10px; }
+        .review { margin-top: 10px; font-style: italic; color: #495057; }
+        .container { max-width: 800px; margin: auto; }
+        footer { margin-top: 20px; text-align: center; color: #6c757d; }
+        .image-preview { max-width: 100%; height: auto; margin-top: 10px; cursor: pointer; }
+        .file-link { color: #007bff; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .close:hover, .close:focus { color: black; text-decoration: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>posters.21</h1>
+
+    <div id="postForm">
+        <h2>Submit a Post</h2>
+        <input type="text" id="postTitle" placeholder="Post Title" required>
+        <textarea id="postContent" rows="4" placeholder="Post Content" required></textarea>
+        <input type="file" id="postFile" accept="image/*,.pdf" required>
+        <button onclick="submitPost()">Submit Post</button>
+    </div>
+
+    <div id="postsContainer">
+        <h2>Posts</h2>
+        <!-- Posts will be displayed here -->
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2023 <a href="https://www.youtube.com/@hackrsheep" target="_blank">@hackrsheep 🔗</a> in yt pls sub</p>
+    <p><a href="https://www.youtube.com/@hackrsheep" target="_blank">Click here to sub</a></p>
+</footer>
+
+<!-- Modal for file preview -->
+<div id="fileModal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <div class="modal-content">
+        <iframe id="filePreview" style="width: 100%; height: 500px;" frameborder="0"></iframe>
+    </div>
+</div>
+
+<script>
+    const posts = [];
+
+    function submitPost() {
+        const postTitle = document.getElementById('postTitle').value.trim();
+        const postContent = document.getElementById('postContent').value.trim();
+        const postFile = document.getElementById('postFile').files[0];
+
+        if (postTitle && postContent && postFile) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const post = {
+                    title: postTitle,
+                    content: postContent,
+                    file: event.target.result,
+                    fileName: postFile.name,
+                    ratings: [],
+                    reviews: []
+                };
+                posts.push(post);
+                document.getElementById('postTitle').value = '';
+                document.getElementById('postContent').value = '';
+                document.getElementById('postFile').value = '';
+                displayPosts();
+            };
+            reader.readAsDataURL(postFile); // Read the file as a data URL
+        }
+    }
+
+    function displayPosts() {
+        const postsContainer = document.getElementById('postsContainer');
+        postsContainer.innerHTML = '';
+
+        posts.forEach((post, index) => {
+            const postDiv = document.createElement('div');
+            postDiv.className = 'post';
+            postDiv.innerHTML = `<strong>${post.title}</strong><p>${post.content}</p>`;
+            
+            // Display the uploaded file (image or link)
+            if (post.file) {
+                if (post.fileName.endsWith('.pdf')) {
+                    postDiv.innerHTML += `<a href="${post.file}" target="_blank" class="file-link">View PDF: ${post.fileName}</a>`;
+                } else {
+                    postDiv.innerHTML += `<img src="${post.file}" class="image-preview" alt="Uploaded Image" onclick="openModal('${post.file}')">`;
+                }
+            }
+
+            // Rating section
+            postDiv.innerHTML += `
+                <div class="rating">
+                    <label for="rating${index}">Rate this post:</label>
+                    <select id="rating${index}" onchange="ratePost(${index}, this.value)">
+                        <option value="">Select Rating</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                </div>
+            `;
+
+            // Review section
+            postDiv.innerHTML += `
+                <input type="text" id="reviewInput${index}" placeholder="Leave a review">
+                <button onclick="submitReview(${index})">Submit Review</button>
+                <div class="reviews" id="reviews${index}"></div>
+            `;
+
+            // Display existing reviews
+            post.reviews.forEach(review => {
+                postDiv.querySelector(`#reviews${index}`).innerHTML += `<div class="review">${review}</div>`;
+            });
+
+            postsContainer.appendChild(postDiv);
+        });
+    }
+
+    function ratePost(index, rating) {
+        if (rating) {
+            posts[index].ratings.push(parseInt(rating));
+            alert(`You rated this post ${rating} star(s)!`);
+        }
+    }
+
+    function submitReview(index) {
+        const reviewInput = document.getElementById(`reviewInput${index}`);
+        const reviewText = reviewInput.value.trim();
+
+        if (reviewText) {
+            posts[index].reviews.push(reviewText);
+            reviewInput.value = '';
+            displayPosts();
+        }
+    }
+
+    function openModal(file) {
+        const modal = document.getElementById('fileModal');
+        const filePreview = document.getElementById('filePreview');
+        filePreview.src = file; // Set the source of the iframe to the file
+        modal.style.display = "block"; // Show the modal
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('fileModal');
+        modal.style.display = "none"; // Hide the modal
+    }
+
+    // Close the modal when clicking outside of it
+    window.onclick = function(event) {
+        const modal = document.getElementById('fileModal');
+        if (event.target == modal) {
+            closeModal();
+        }
+    }
+</script>
+
+</body>
+</html>
